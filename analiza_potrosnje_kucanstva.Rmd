@@ -1,0 +1,1123 @@
+---
+title: "Analiza potrošnje kućanstva"
+author: "RegreTTion"
+date: "2022-12-08"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## UVOD
+
+U ovom projektu bavit ćemo se analizom potrošnje kućanstva u španjolskim regijama. Svoje zaključke temeljimo na istraživanju koje provodi španjolski Institut za statistiku od 2006. godine. Fokus ovog projekta bit će na rezultatima iz 2019. i 2020. godine. Nastojat ćemo odgovoriti na sljedeća istraživačka pitanja: 
+
+1. Postoji li zavisnost između broja članova kućanstva i energenta koji se upotrebljava za dobivanje tople vode?
+2. Jesu li prosječni izdatci kućanstava jednaki za svih 19 autonomnih zajednica stanovanja (regija) Španjolske?
+3. Mogu li dostupne značajke predvidjeti ukupni mjesečni prihod kućanstva?
+4. Postoji li razlika u rashodima kućanstva u 2019. i 2020. godini?
+
+## Case study: *Analiza potrošnje kućanstva*
+
+U datasetu dane su dvije tablice: Hogar i Gastos. Za svaku godinu od 2006. do 2020. godine postoje obje tablice u datasetu.
+Tablica Gastos sastoji se od 14 varijabli koje iskazuju potrošnju kućanstva po različitim kategorijama. Podaci su većinom iskazani relativno u postocima. 
+Tablica Hogar ima više od 100 varijabli koji su podijeljeni u 8 kategorija: 
+
+  - opće informacije o kućanstvu
+  
+  - karakteristike kućanstva
+  
+  - varijable koje opisuju primanja člana kućanstva koji najviše doprinosi prihodima
+  
+  - varijable koje opisuju dodatne stambene objekte u vlasništvu kućanstva
+  
+  - varijable koje opisuju rashode kućanstva
+  
+  - varijable koje opisuju primanja kućanstva
+  
+  - varijable koje opisuju koliko se obroka pripremi u kućanstvu kroz 2 tjedna
+  
+
+U ovom projektu koristit ćemo varijable iz tablice Hogar za 2019. i 2020. godinu. Objasnit ćemo što koja varijabla označava te kako ćemo ih koristiti u različitim istraživačkim pitanjima.
+
+## Deskriptivna analiza
+
+Učitavamo potrebne pakete.
+```{r echo=T, error=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+```
+
+Učitavamo potrebne podatke iz tablice Hogar za 2019. i 2020. godinu. 
+```{r}
+hogar19 = read.csv("datasets/hogar_epf_2019.csv")
+```
+
+
+```{r}
+hogar20 = read.csv("datasets/hogar_epf_2020.csv")
+```
+
+
+```{r}
+dim(hogar19)
+dim(hogar20)
+
+hogar19 = select(hogar19, c("NMIEMB", "NUMOCUP", "FUENAGUA", "GASTOT", "IMPEXAC", "CCAA", "NUMESTU", "NNINOSD", "NHABIT"))
+hogar20 = select(hogar20, c("NMIEMB", "NUMOCUP", "FUENAGUA", "GASTOT", "IMPEXAC", "CCAA", "NUMESTU", "NNINOSD", "NHABIT"))
+
+View(hogar19)
+View(hogar20)
+
+```
+Iz ispisa dimenzija tablica Hogar za 2019. i 2020. godinu vidimo da nije isti broj kućanstava ispitan za te dvije godine. Za 2019. postoji 20817 ispitanih kućanstava, a za 2020. godinu postoji 19170 ispitanih kućanstava. Budući da je red veličine ispitanih kućanstava približno jednak, njihova razlika ne bi trebala dovesti do problema u statističkom zaključivanju kod podataka. 
+Za obje godine ispituje se istih 223 varijabli. U projektu ćemo koristiti njih 9:
+
+1. NMIEMB = Varijabla koja označuje broj članova u kućanstvu. Poprima vrijednost od 1 do 20. 
+2. NUMOCUP = Varijabla koja označuje broj zaposlenih članova kućanstva. Poprima vrijednost u intervalu od 0 do 20.
+3. FUENAGUA = Kategorijska varijabla koja određuje koji je izvor tople vode kroz 8 kategorija:
+  - električna energija (vrijednost: 1)
+  - prirodni plin (vrijednost: 2)
+  - ukapljeni plin (vrijednost: 3)
+  - ostali tekući plinovi (vrijednost: 4)
+  - kruta goriva (vrijednost: 5)
+  - ostalo (vrijednost: 6)
+  - nije primjenjivo (ako je AGUACALI = 6, vrijednost: b)
+  - nije navedeno (vrijednost: -9)
+4. GASTOT = Metrička varijabla koja sadržava ukupnu vrijednost izdataka kućanstva na godišnjoj razini. Tu pripadaju i novčani i nenovčani izdaci koji su prilagođeni vremenu i populaciji. Može imati vrijednost između 1 i 9999999999999999.
+5. IMPEXAC = Metrička varijabla koja prikazuje mjesečni prihod kućanstva. Može poprimiti vrijednost između 0 i 99999.
+6. CCAA = Kategorijska varijabla koja označava autonomnu zajednicu stanovanja ili regiju Španjolske
+ - Andalusia (vrijednost: 1)
+ - Aragon (vrijednost: 2)
+ - Principality of Asturias (vrijednost: 3)
+ - Illes Balears (vrijednost: 4)
+ - Canary Islands (vrijednost: 5)
+ - Cantabria (vrijednost: 6)
+ - Castilla y Leon (vrijednost: 7)
+ - Castilla - La Mancha (vrijednost: 8)
+ - Catalonia (vrijednost: 9)
+ - Valencian Community (vrijednost: 10)
+ - Extremadura (vrijednost: 11)
+ - Galicia (vrijednost: 12)
+ - Community of Madrid (vrijednost: 13)
+ - Region of Murcia (vrijednost: 14)
+ - Comunidad Foral de Navarra (vrijednost: 15)
+ - Basque Country (vrijednost: 16)
+ - La Rioja (vrijednost: 17)
+ - Ceuta (vrijednost: 18)
+ - Melilla (vrijednost: 19)
+7. NUMESTU = Numerička varijabla koja označava broj studenata u kućanstvu. Može poprimiti vrijednost od 0 do 20.
+8. NNINOSD = Numerička varijabla koja označava broj djece ovisne o primanjima ukućana (djeca do 25 godina koja nemaju posao). Može poprimiti vrijednost od 0 do 20 te -9 ako ne piše.
+9. NHABIT = Numerička varijabla koja označava broj soba u kućanstvu. Može poprimiti vrijednosti 1-7, 8 ako je broj soba veći od 7 i -9 ako ne piše.
+
+```{r}
+summary(select(hogar19, c("NMIEMB", "NUMOCUP", "GASTOT", "IMPEXAC", "NUMESTU", "NNINOSD", "NHABIT")))
+
+```
+Za podatke iz 2019. godine možemo vidjeti da 50% kućanstava ima između 2 i 3 člana te da ne postoje kućanstva koja imaju više od 9 članova. U prosjeku u jednom kućanstvu zaposlena je 1 ili 2 osobe. Prosječni godišnji izdaci kućanstva su 18 630 000 000, te prosječni mjesečni prihod 1950. Prosječno kućanstvo ima 0 ili 1 dijete ovisno o primanjima ukućana među kojima se može nalaziti i ukućan koji studira. 50% kućanstava imaju 5 ili 6 soba.
+
+Ostale varijable nisu prikazane jer su kategorijske te za njih nema smisla raditi ovakvu analizu.
+
+```{r}
+summary(select(hogar20, c("NMIEMB", "NUMOCUP", "GASTOT", "IMPEXAC", "NUMESTU", "NNINOSD", "NHABIT")))
+
+```
+Za podatke iz 2020. godine možemo vidjeti da je 50% kućanstava kao i 2019. godine imalo 2 ili 3 člana te također da ne postoji kućanstvo s više od 9 članova. Prosječni broj zaposlenih članova kućanstva je i dalje 1 ili 2. Prosječni godišnji izdaci u 2020. godini narasli su na 26 540 000 000, dok je prosječni mjesečni prihod kućanstva također narastao na 2248. U ovoj godini kućanstva također u prosjeku imaju 0 ili 1 financijski ovisno dijete među kojima je u određenim slučajevima i ukućan koji studira. Ove godine 50% kućanstava ima između 4 i 6 soba.
+
+Ostale varijable nisu prikazane jer su kategorijske te za njih nema smisla provoditi ovakvu analizu.
+
+
+### Nedostajuće vrijednosti za 2019. godinu
+
+Promotrimo sada nedostajuće vrijednosti u podacima za 2019. godinu.
+
+```{r}
+for(col_name in names(hogar19)){
+  if(sum(is.na(hogar19[, col_name])) > 0){
+    cat('Ukupno nedostajućih vrijednosti za varijablu ', col_name, ': ', sum(is.na(hogar19[,col_name])), '\n')
+  }
+}
+
+```
+
+
+Uočavamo da slučajna varijabla FUENAGUA nedostaje u 44 zapisa. Budući da se radi o relativno malom skupu zapisa (ukupni broj zapisa za 2019. godinu iznosi 20817) ovaj skup zapisa ćemo u daljnjoj analizi zanemariti.
+
+### Nedostajuće vrijednosti za 2020. godinu
+
+```{r}
+for(col_name in names(hogar20)){
+  if(sum(is.na(hogar20[, col_name])) > 0){
+    cat('Ukupno nedostajućih vrijednosti za varijablu ', col_name, ': ', sum(is.na(hogar20[,col_name])), '\n')
+  }
+}
+
+```
+
+
+Vidimo da postoji 26 zapisa u kojima nije zabilježena vrijednost slučajne varijable FUENAGUA i 1 zapis u kojima nije zabilježena vrijednost slučajne varijable GASTOT.
+Ponovno, budući da se radi o relativno malom skupu podataka zanemarit ćemo te zapise u analizi.
+
+
+
+Sukladno gornjoj dokumentaciji sada ćemo iz dataseta maknuti zapise u kojima se pojavljuju nedostajuće vrijednosti.
+
+```{r}
+hogar_r19 = hogar19[!is.na(hogar19$FUENAGUA), ]
+```
+
+```{r}
+
+hogar_r20 = hogar20[!is.na(hogar20$FUENAGUA), ]
+hogar_r20 = hogar_r20[!is.na(hogar_r20$GASTOT), ]
+```
+
+
+
+U nastavku projekta su postavljena istraživačka pitanja te je za svako provedena analiza potrebnih varijabli, prikladni test i donesen zaključak.
+
+
+## 1. Postoji li zavisnost između broja članova kućanstva i energenata koji se upotrebljavaju za dobivanje tople vode?
+
+Za dobivanje odgovora na ovo pitanje koristit će se varijable NMIEMB i FUENAGUA.
+
+Varijabla NMIEMB je numerička varijabla predstavlja broj članova pojedinog kućanstva.
+
+```{r}
+b = seq(min(hogar_r19$NMIEMB) - 1, max(hogar_r19$NMIEMB) + 1, 1)
+hist(hogar_r19$NMIEMB, main="Broj članova kućanstva", xlab="broj članova", ylab="frekvencija", breaks = b)
+boxplot(hogar_r19$NMIEMB, main = "Broj članova kućanstva")
+```
+
+Iz ovog je vidljivo da se broj članova kućanstva kreće između 0 i 9.
+
+Varijabla FUENAGUA je kategorijska varijabla te predstavlja energent za dobivanje tople vode u kućanstvu.
+
+```{r}
+barplot(table(hogar_r19$FUENAGUA),cex.names=1,main='Energenti za toplu vodu')
+```
+
+Iz ovog je vidljivo da u svakoj kategoriji postoji određeni broj kućanstava.
+
+Da bi se ispitala zavisnost između broja članova kućanstva i energenata koji se upotrebljavaju za dobivanje tople vode, grupirat ćemo kućanstva u 3 skupine: kućanstva s malim (0, 1 ili 2), srednjim (3 ili 4) i velikim brojem članova (5 ili više).
+Prije grupiranja moramo izbaciti podatke koji imaju vrijednost varijable FUENAGUA -9, tj. ona kućanstva koja se nisu izjasnila o energentima.
+Nakon toga moći ćemo provesti test nezavisnosti za kategorijske podatke.
+
+
+```{r}
+hogar_r19_copy = hogar_r19[hogar_r19$FUENAGUA != 9, ]
+```
+
+Združimo kućanstva u navedene 3 kategorije.
+
+```{r}
+# združivanje kućanstva s 0, 1 ili 2 člana
+for (column_name in c(0, 1,2)){
+  hogar_r19_copy$NMIEMB[hogar_r19_copy$NMIEMB == column_name] = "Mala_kućanstva";
+}
+
+# združivanje kućanstva s 3 ili 4 člana
+for (column_name in c(3, 4)){
+  hogar_r19_copy$NMIEMB[hogar_r19_copy$NMIEMB == column_name] = "Srednja_kućanstva";
+}
+
+# združivanje kućanstva s 5 ili više članova
+for (column_name in c(5, 6, 7 ,8 ,9)){
+  hogar_r19_copy$NMIEMB[hogar_r19_copy$NMIEMB == column_name] = "Velika_kućanstva";
+}
+```
+
+Kontingencijska tablica varijabli veličine kućanstva i energenata za dobivanje tople vode.
+
+```{r}
+tbl = table(hogar_r19_copy[hogar_r19_copy$NMIEMB == "Mala_kućanstva" | hogar_r19_copy$NMIEMB == "Srednja_kućanstva" | hogar_r19_copy$NMIEMB == "Velika_kućanstva",]$NMIEMB, 
+            hogar_r19_copy[hogar_r19_copy$NMIEMB == "Mala_kućanstva" | hogar_r19_copy$NMIEMB == "Srednja_kućanstva" | hogar_r19_copy$NMIEMB == "Velika_kućanstva",]$FUENAGUA)
+added_margins_tbl = addmargins(tbl)
+print(added_margins_tbl)
+```
+Test nezavisnosti $\chi^2$ test implementiran je u funkciji `chisq.test()` koja kao ulaz prima kontingencijsku tablicu podataka koje testiramo na nezavisnost.
+Pretpostavka testa je da očekivana frekvencija pojedinog razreda mora biti veća ili jednaka 5 .
+
+```{r}
+for (col_names in colnames(added_margins_tbl)){
+  for (row_names in rownames(added_margins_tbl)){
+    if (!(row_names == 'Sum' | col_names == 'Sum') ){
+      cat('Očekivane frekvencije za razred ',col_names,'-',row_names,': ',(added_margins_tbl[row_names,'Sum'] * added_margins_tbl['Sum',col_names]) / added_margins_tbl['Sum','Sum'],'\n')
+    }
+  }
+}
+```
+
+Sve očekivane frekvencije su veće od 5. Možemo nastaviti sa $\chi^2$ testom.
+
+Postavljamo hipoteze:
+
+$$
+\\ H_0: Podaci \ su \ međusobno \ nezavisni.
+\\ H_1: Podaci \ su \ međusobno \ zavisni.
+$$
+
+```{r}
+chisq.test(tbl,correct=F)
+```
+
+Na temelju p-vrijednosti odbacujemo $H_0$ u korist $H_1$ koja kaže da su veličina kućanstva i energent koji kućanstvo koristi za dobivanje tople vode zavisni.
+
+
+## 2. Jesu li prosječni izdatci kućanstava jednaki za svih 19 autonomnih zajednica stanovanja (regija) Španjolske?
+
+Kako bismo odgovorili na ovo pitanje, promatrat ćemo varijable u tablici Hogar iz 2019. godine:
+
+ - CCAA - autonomne zajednice stanovanja (regije)
+ - GASTOT - ukupni godišnji izdatci 
+
+
+ 
+### Nedostajuće vrijednosti
+```{r}
+
+hogar3 = read.csv("datasets/hogar_epf_2019.csv")
+hogar3 = select(hogar3, c("CCAA", "GASTOT"))
+
+hogar3[is.na(hogar3$CCAA), ]
+hogar3[is.na(hogar3$GASTOT), ]
+
+gastot3 = hogar3$GASTOT
+
+```
+
+Za varijable koje promatramo nema nedostajućih vrijednosti.
+
+
+### Vizualizacija podataka
+
+Varijabla GASTOT
+```{r}
+hist(hogar3$GASTOT, main="Ukupan iznos izdataka kućanstva u 2019. godini", xlab="iznos izdataka kućanstava", ylab="frekvencija")
+
+```
+
+Možemo primijetiti da su podaci izrazito desno zakrivljeni pa na njih primjenjujemo logaritamsku tranformaciju.
+
+```{r}
+gastot3_log = log(gastot3)
+
+hist(gastot3_log, main="Ukupan iznos izdataka kućanstva u 2019. godini", xlab="iznos izdataka kućanstava", ylab="frekvencija")
+
+```
+
+
+Varijabla CCAA
+```{r}
+barplot(table(hogar3$CCAA), main="Autonomne zajednice stanovanja",  cex.names=1)
+
+
+
+```
+
+Iako u tablici s opisima varijabli za varijablu CCAA postoji 19 autonomnih zajednica stanovanja, iz dijagrama možemo vidjeti da većina uzorka živi u jednoj od prvih 9 te da ih malo više od 1500 živi u autonomnoj zajednici stanovanja označenoj s 0 što ćemo smatrati kao ostalo, odnosno da oni žive u jednoj od preostalih 10.
+
+Pripremit ćemo podatke za obradu tako da autonomnim zajednicama stanovanja pridjelimo nazive radi lakšeg snalaženja i interpretacije podataka.
+
+```{r priprema}
+# Priprema podataka
+hogar3$CCAA = factor(hogar3$CCAA,levels = c(0,1,2,3,4,5,6,7,8,9),labels = c('ostalo','Andalusia','Aragon', 'Principality of Asturias', 'Illes Balears', 'Canary Islands', 'Cantabria', 'Castilla y Leon', 'Castilla - La Mancha', 'Catalonia'))
+summary(hogar3$CCAA)
+```
+
+### Pretpostavke testa
+Kako bismo testirali srednje vrijednosti izdataka kućanstava ovisno o autonomnih zajednicama stanovanja, koristit ćemo analizu varijance (ANOVA). Budući da promatramo samo jedan kriterij na temelju kojeg se razlikuju autonomne zajednice stanovanja, a to je izdatak kućanstva, koristit ćemo jednofaktorsku ANOVA-u.
+
+ANOVA pretpostavlja dvije varijabilnosti u podacima, varijabilnost unutar pojedinog uzorka i varijabilnost između uzoraka. Varijabilnost unutar pojedinog uzorka je rezultat slučajnosti, a varijabilnost među grupama će biti odražena u evenutalnom postojanju razlika u sredinama populacije.
+
+Pretpostavke ANOVA-e su:
+
+ - nezavisnost pojedinih podataka u uzorcima
+ - normalna razdioba podataka
+ - homogenost varijanci među populacijama.
+ 
+ 
+Također, važno je primjetiti da naše grupe koje predstavljaju autonomne zajednice stanovanja nisu jedakih veličina pa ANOVA neće biti toliko robusna kao kad bi veličina svih grupa bila jednaka.
+
+Nezavisnost pojedinih podataka u uzorcima je rezultat slučajnosti kojom su podaci prikupljeni.
+Normalnost podataka za svaku grupu provjeravamo Q-Q plotom.
+
+
+```{r test pretpostavki - normalnost}
+require(nortest)
+lillie.test(gastot3_log)
+
+#lillie.test(gastot3_log[hogar3$CCAA=='ostalo'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Andalusia'])
+lillie.test(gastot3_log[hogar3$CCAA=='Aragon'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Principality of Asturias'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Illes Balears'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Canary Islands'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Cantabria'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Castilla y Leon'])
+#lillie.test(gastot3_log[hogar3$CCAA=='Castilla - La Mancha'])
+lillie.test(gastot3_log[hogar3$CCAA=='Catalonia'])
+
+#hist(gastot3_log[hogar3$CCAA=='ostalo'])
+#hist(gastot3_log[hogar3$CCAA=='Andalusia'])
+hist(gastot3_log[hogar3$CCAA=='Aragon'], main="Histogram za izdatke u Aragonu", xlab="logaritamska vrijednost izdatka")
+#hist(gastot3_log[hogar3$CCAA=='Principality of Asturias'])
+#hist(gastot3_log[hogar3$CCAA=='Illes Balears'])
+#hist(gastot3_log[hogar3$CCAA=='Canary Islands'])
+#hist(gastot3_log[hogar3$CCAA=='Cantabria'])
+#hist(gastot3_log[hogar3$CCAA=='Castilla y Leon'])
+#hist(gastot3_log[hogar3$CCAA=='Castilla - La Mancha'])
+hist(gastot3_log[hogar3$CCAA=='Catalonia'], main="Histogram za izdatke u Cataloniji", xlab="logaritamska vrijednost izdatka")
+
+#qqnorm(gastot3_log[hogar3$CCAA=='ostalo'])
+#qqline(gastot3_log[hogar3$CCAA=='ostalo'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Andalusia'])
+#qqline(gastot3_log[hogar3$CCAA=='Andalusia'], col="steelblue", lwd=2)
+
+qqnorm(gastot3_log[hogar3$CCAA=='Aragon'], main="Q-Q plot za izdatke u Aragonu")
+qqline(gastot3_log[hogar3$CCAA=='Aragon'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Principality of Asturias'])
+#qqline(gastot3_log[hogar3$CCAA=='Principality of Asturias'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Illes Balears'])
+#qqline(gastot3_log[hogar3$CCAA=='Illes Balears'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Canary Islands'])
+#qqline(gastot3_log[hogar3$CCAA=='Canary Islands'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Cantabria'])
+#qqline(gastot3_log[hogar3$CCAA=='Cantabria'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Castilla y Leon'])
+#qqline(gastot3_log[hogar3$CCAA=='Castilla y Leon'], col="steelblue", lwd=2)
+
+#qqnorm(gastot3_log[hogar3$CCAA=='Castilla - La Mancha'])
+#qqline(gastot3_log[hogar3$CCAA=='Castilla - La Mancha'], col="steelblue", lwd=2)
+
+qqnorm(gastot3_log[hogar3$CCAA=='Catalonia'], main="Q-Q plot za izdatke u Cataloniji")
+qqline(gastot3_log[hogar3$CCAA=='Catalonia'], col="steelblue", lwd=2)
+
+```
+
+Normalnost podataka je ispitana Lillieforsovom inačicom KS testa (Kolmogorov–Smirnov test) te vizualizirana histogramima i Q-Q plotovima. U određivanju normalnosti podataka oslanjat ćemo se na Q-Q plotove zbog velike količine podataka u uzorku.
+
+Zahvaljujući logaritamskoj transformaciji izdataka kućanstava, dobivamo uzorke koji su bliže normalnoj distribuciji od originalnih. Iz Q-Q plotova možemo primjetiti da je većina uzoraka vrlo blizu normalnoj distribuciji, odstupanja možemo primijetiti u autonomnoj zajednici stanovanja Principality of Asturias i Catalonia koje imaju teške repove, ali ćemo zbog robusnosti testa pretpostaviti da su dovoljno blizu normalnoj distribuciji.
+
+U izvješću prikazujemo testiranje normalnosti na dva od deset uzoraka jer je postupak analogan i u potpunosti proveden na svim uzrocima u R-bilježnici. Prikazani su postupci testiranja za Aragon i Cataloniu. Iz Q-Q plota za Aragon možemo primijetiti da je distribucija vrlo blizu normalnoj što nam potvrđuje i test, dok Q-Q plot za Cataloniu pokazuje odstupanje u lijevom repu, no zbog robusnosti testa ćemo pretpostavku normalnosti smatrati zadovoljenom za sve uzroke.
+
+Homogenost varijanci ćemo testirati Bartlettovim testom. Hipoteze za navedeni test su:
+$$ \begin{aligned}
+  H_0 & : \sigma_0^2 = \sigma_1^2 = \ldots = \sigma_9^2 \\
+  H_1 & : \text{barem dvije varijance nisu iste}.
+\end{aligned} $$
+
+
+
+```{r test pretpostavki - homogenost varijanci}
+
+# Testiranje homogenosti varijance uzoraka Bartlettovim testom
+bartlett.test(gastot3_log ~ hogar3$CCAA)
+
+var((gastot3_log[hogar3$CCAA=='ostalo']))
+var((gastot3_log[hogar3$CCAA=='Andalusia']))
+var((gastot3_log[hogar3$CCAA=='Aragon']))
+var((gastot3_log[hogar3$CCAA=='Principality of Asturias']))
+var((gastot3_log[hogar3$CCAA=='Illes Balears']))
+var((gastot3_log[hogar3$CCAA=='Canary Islands']))
+var((gastot3_log[hogar3$CCAA=='Cantabria']))
+var((gastot3_log[hogar3$CCAA=='Castilla y Leon']))
+var((gastot3_log[hogar3$CCAA=='Castilla - La Mancha']))
+var((gastot3_log[hogar3$CCAA=='Catalonia']))
+```
+Iako je p-vrijednost izrazito mala, možemo vidjeti da su varijance istog reda veličine pa ćemo zbog robusnosti ANOVA testa ovu pretpostavku smatrati zadovoljenom. Treba napomenuti da su ovo varijance logaritamski transformirane varijable CCAA koja predstavlja izdatke kućanstava pa same vrijednosti s obzirom na mjernu jedinicu nemaju previše smisla.
+
+
+### Jednofaktorska ANOVA
+Jednofaktorski ANOVA model glasi:
+$$ Y_{ij} = \mu_{i} + \epsilon_{ij}, $$
+gdje je $\mu_{i}$ sredina izdataka kućanstva ovisno o autonomnoj zajednici stanovanja $i = 0,..,9$. Analizom varijance testiramo:
+$$ \begin{aligned}
+  H_0 & : \mu_0 = \mu_2 = \ldots = \mu_9 \\
+  H_1 & : \text{barem dvije sredine nisu iste}.
+\end{aligned} $$
+
+Mjere varijabilnosti u podatcima:
+$$ \begin{aligned}
+SST &= \sum_{i=1}^k \sum_{j=1}^n (y_{ij} - \bar{y}_{..})^2 = \text{ukupna varijabilnost} \\
+SSA &= n \sum_{i=1}^k (\bar{y}_{i.} - \bar{y}_{..})^2 = \text{varijabilnost između grupa} \\
+SSE &= \sum_{i=1}^k \sum_{j=1}^n (y_{ij} - \bar{y}_{i.})^2 = \text{varijabilnost unutar grupa}
+\end{aligned}$$
+
+Uz $s_1^2 = \dfrac{SSA}{k - 1}$ i $s^2 = \dfrac{SSE}{k(n-1)}$, možemo provesti F-test s testnom statistikom $$ f = \frac{s_1^2}{s^2} \overset{H_0}{\sim} f[k-1, k(n-1)].  $$
+
+Provjerimo postoje li razlike u izdatcima kućanstava za različite autonomne zajednice stanovanja. 
+
+
+
+```{r test}
+
+# Graficki prikaz podataka
+boxplot(gastot3_log ~ hogar3$CCAA, xlab=" ", ylab="Logaritmirana vrijednost izdataka kućanstva", names = c('ostalo','Andalusia','Aragon', 'Prin. of As.', 'Ill. Balears', 'Canary Isl.', 'Cantabria', 'Cas.y Leon', 'Cas.-La M.', 'Catalonia'), las=2)
+
+# Test
+a = aov(gastot3_log ~ hogar3$CCAA)
+summary(a)
+
+
+```
+
+Iz grafičkog prikaza možemo pretpostaviti da će srednje vrijednosti logaritmiranih izdataka kućanstava odstupati s obzirom na to iz koje autonomne zajednice stanovanja kućanstvo dolazi. Vrijednost SSA je 3883 s 9 stupnjeva slobode (k = 10), a SSE je 12622 s 20807 stupnjeva slobode pa je vrijednost F-testa 711.2. ANOVA nam potvrđuje pretpostavku iz grafičkog prikaza, tj. postoji statistički značajna razlika u srednjim vrijednostima izdataka kućanstava. Na temelju male p-vrijednosti odbacujemo $H_0$ u korist $H_1$.
+
+
+## 3. Mogu li dostupne značajke predvidjeti ukupni mjesečni prihod kućanstva?
+
+Kako bi znali predvidjeti ukupni mjesečni prihod kućanstva, možemo ispitati različite varijable koje bi mogle utjecati na to:
+
+-   NMIEMB - broj članova kućanstva
+-   NUMOCUP - broj zaposlenih članova kućanstva 
+-   NNINOSD - broj djece ovisne o ukućanima
+-   NUMESTU - broj ukućana koji studiraju
+-   NHABIT - broj soba u kućanstvu
+
+Sve varijable su numeričke varijable. Točan iznos mjesečnih primanja kućanstva je u tablicama prikazan varijablom IMPEXAC. Pri analizi ćemo koristiti podatke iz tablice hogar3_r19.
+
+Prvo ćemo koristiti model jednostavne regresije kako bi ispitali postoji li određena linearna veza između varijabli te ćemo nakon toga probati višestrukom regresijom predvidjeti mjesečni prihod kućanstva.
+
+
+```{r}
+hogar3_r19 = select(hogar_r19, c("NMIEMB", "NUMOCUP", "NUMESTU", "NNINOSD", "NHABIT", "IMPEXAC"))
+```
+
+### 1. Nedostajuće vrijednosti
+```{r nedostajuce vrijednosti}
+#nrow(hogar3_r19[hogar3_r19$NUMESTU == -9, ])
+#nrow(hogar3_r19[hogar3_r19$NHABIT == 9, ])
+hogar3_r19 = hogar3_r19[hogar3_r19$NHABIT != 9, ]
+```
+
+U opisu tablica je naznačeno da jedino varijable NUMESTU i NHABIT mogu imati nedostajuće vrijednosti te smo provjerom ustanovili da u ovom datasetu samo NHABIT ima nedostajuće vrijednosti koje smo potom maknuli.
+
+### 2. Vizualizacija varijabli
+
+Varijabla NMIEMB je vizualizirana u prvom pitanju.
+
+Varijabla NUMOCUP
+
+```{r}
+b = seq(min(hogar3_r19$NUMOCUP)-1, max(hogar3_r19$NUMOCUP) + 1, 1)
+hist(hogar3_r19$NUMOCUP, main="Broj zaposlenih članova kućanstva u 2019. godini", xlab="broj zaposlenih članova", ylab="frekvencija", breaks = b)
+
+#boxplot(hogar3_r19$NUMOCUP, main = "Broj zaposlenih članova kućanstva u 2019. godini", outline=TRUE)
+
+```
+
+Iz grafičkog prikaza vidimo da broj zaposlenih članova ima minimum 0 i maksimum 9 te da je najveća količina podataka između 0 i 2 što se može vidjeti na histogramu. Distribucija je izrazito zakrivljena udesno i ne liči normalnoj.
+
+Varijabla NNINOSD
+
+```{r}
+b = seq(min(hogar3_r19$NNINOSD)-1, max(hogar3_r19$NNINOSD) + 1, 1)
+hist(hogar3_r19$NNINOSD, main="Broj financijski ovisne djece kućanstva u 2019. godini", xlab="broj financijski ovisne djece", ylab="frekvencija", breaks = b)
+
+#boxplot(hogar3_r19$NNINOSD, main = "Broj financijski ovisne djece kućanstva u 2019. godini", outline=TRUE)
+
+```
+
+Iz grafa se može vidjeti da najviše kućanstava ima 0 financijski ovisne djece. Također se iz boxplota može iščitati da 50% kućanstava ima 0 ili 1 financijski ovisno dijete.
+
+
+Varijabla NUMESTU
+
+```{r}
+b = seq(min(hogar3_r19$NUMESTU)-1, max(hogar3_r19$NUMESTU) + 1, 1)
+hist(hogar3_r19$NUMESTU, main="Broj studenata u kućanstvu u 2019. godini", xlab="broj studenata", ylab="frekvencija", breaks = b)
+
+#boxplot(hogar3_r19$NUMESTU, main = "Broj studenata u kućanstvu u 2019. godini", outline=TRUE)
+
+```
+
+Iz grafa se može vidjeti da u najviše kućanstava nema studenata.
+
+
+Varijabla NHABIT
+
+```{r}
+b = seq(min(hogar3_r19$NHABIT)-1, max(hogar3_r19$NHABIT) + 1, 1)
+hist(hogar3_r19$NHABIT, main="Broj soba u kućanstvu u 2019. godini", xlab="broj soba", ylab="frekvencija", breaks = b)
+
+#boxplot(hogar3_r19$NHABIT, main = "Broj soba u kućanstvu u 2019. godini", outline=TRUE)
+
+```
+
+Iz grafa možemo vidjeti da u prosjeku najviše kućanstava ima 5 soba te da 50% kućanstava ima od 5 do 6 soba. Distribucija na histogramu nalikuje na normalnu.
+
+
+Varijabla IMPEXAC
+```{r}
+hist(hogar3_r19$IMPEXAC, main="Točan iznos mjesečnih primanja kućanstva u 2019. godini", xlab="iznos mjesečnih primanja ", ylab="frekvencija")
+
+#boxplot(hogar3_r19$IMPEXAC, main = "Točan iznos mjesečnih primanja kućanstva u 2019. godini", outline=TRUE)
+#boxplot(hogar3_r19$IMPEXAC, main = "Točan iznos mjesečnih primanja kućanstva u 2019. godini", outline=FALSE)
+
+```
+
+Iz grafa vidimo da distribucija mjesečnih primanja pokazuje svojstva distribucije koja je znatno zakrivljena udesno. 
+
+
+### 3. Vizualizacija odnosa zavisnih varijabli o nezavisnima
+
+Kako bismo promotrili utjecaj samo jedne nezavisne numeričke varijable (NMIEMSD, NUMOCUP, NNINOSD, NUMESTU, NHABIT) na zavisnu varijablu (IMPEXAC), grafički je moguće dobiti jako dobar dojam o njihovom odnosu pomoću scatter plota. Također ćemo procijeniti model jednostavne regresije, po jedan za svaku nezavisnu varijablu kako bismo dobili bolji pogled na podatke.
+
+```{r jednost. regresija}
+
+fit.NMIEMB = lm(IMPEXAC~NMIEMB,data=hogar3_r19) #linearni model iznosa mjesečnih primanja i broja ukućana
+
+fit.NUMOCUP = lm(IMPEXAC~NUMOCUP,data=hogar3_r19) #linearni model iznosa mjesečnih primanja i broja zaposlenih članova kućanstva
+
+fit.NNINOSD = lm(IMPEXAC~NNINOSD,data=hogar3_r19) #linearni model iznosa mjesečnih primanja i broja financijski ovisne djece
+
+fit.NUMESTU = lm(IMPEXAC~NUMESTU,data=hogar3_r19) #linearni model iznosa mjesečnih primanja i broja studenata
+
+fit.NHABIT = lm(IMPEXAC~NHABIT,data=hogar3_r19) #linearni model iznosa mjesečnih primanja i broja soba u kućanstvu
+
+
+plot(hogar3_r19$NMIEMB,hogar3_r19$IMPEXAC, xlab='broj ukućana', ylab='mjesečna primanja kućanstva') #grafički prikaz podataka
+lines(hogar3_r19$NMIEMB,fit.NMIEMB$fitted.values,col='red') #grafički prikaz procijenjenih vrijednosti iz modela
+
+plot(hogar3_r19$NUMOCUP,hogar3_r19$IMPEXAC, xlab='broj zaposlenih članova kućanstva', ylab='mjesečna primanja kućanstva') #grafički prikaz podataka
+lines(hogar3_r19$NUMOCUP,fit.NUMOCUP$fitted.values,col='red') #grafički prikaz procijenjenih vrijednosti iz modela
+
+plot(hogar3_r19$NNINOSD,hogar3_r19$IMPEXAC, xlab='broj fin. ovisne djece', ylab='mjesečna primanja kućanstva') #grafički prikaz podataka
+lines(hogar3_r19$NNINOSD,fit.NNINOSD$fitted.values,col='red') #grafički prikaz procijenjenih vrijednosti iz modela
+
+plot(hogar3_r19$NUMESTU,hogar3_r19$IMPEXAC, xlab='broj studenata', ylab='mjesečna primanja kućanstva') #grafički prikaz podataka
+lines(hogar3_r19$NUMESTU,fit.NUMESTU$fitted.values,col='red') #grafički prikaz procijenjenih vrijednosti iz modela
+
+plot(hogar3_r19$NHABIT,hogar3_r19$IMPEXAC, xlab='broj soba', ylab='mjesečna primanja kućanstva') #grafički prikaz podataka
+lines(hogar3_r19$NHABIT,fit.NHABIT$fitted.values,col='red') #grafički prikaz procijenjenih vrijednosti iz modela
+
+```
+
+Na svakom grafičkom prikazu ovisnosti mjesečnih primanja o gornjim ulaznim varijablama se vidi pozitivna ovisnost. Kad je u pitanju ovisnost o broju članova kućanstva, broju financijski ovisne djece i broju studenata vidi se blaga pozitivna ovisnost, dok se na drugom grafu vidi znatniji utjecaj broja zaposlenih članova kućanstva na iznos mjesečnih primanja, što bi značilo da bi broj zaposlenih članova mogao imati jači utjecaj na modeliranje ukupnog iznosa mjesečnih primanja.
+
+Kako u skup financijski ovisne djece spadaju i studenti, probat ćemo koristiti samo varijablu NNINOSD umjesto NUMESTU.
+
+
+### 4. Pretpostavke modela višestruke regresije
+
+Kako bi se dobiveni modeli analizirali i usporedili, prvo je potrebno provjeriti da pretpostavke modela nisu znatno narušene. Najbitnije pretpostavke za numeričke varijable su:
+
+  - pretpostavke o regresorima (regresori ne smiju biti međusobno jako korelirani)
+  - pretpostavke o rezidualima (normalnost reziduala i homogenost varijance reziduala).
+
+
+#### 4.1 Koreliranost regresora
+
+Prije procjene modela višestruke regresije potrebno je provjeriti da pojedini parovi varijabli nisu (previše) korelirani, tj. da jednom varijablom nije već predstavljeno nešto što nam druga varijabla objašnjava. Određena korelacija između varijabli je neizbježna, ali varijable s vrlo visokom korelacijom će uzrokovati probleme u interpretaciji regresijskih rezultata.
+
+```{r cor}
+# korelacijski koeficijenti parova regresora
+cor(cbind(hogar3_r19$NMIEMB,hogar3_r19$NUMOCUP, hogar3_r19$NNINOSD, hogar3_r19$NHABIT)) 
+
+```
+
+Vidimo da su varijable NMIEMB i NNINOSD previše korelirane (koeficijent koreliranosti im je 0.759) te ćemo zbog toga morati izbaciti varijablu NNINOSD (broj financijski ovisne djece u kućanstvu). Umjesto nje ćemo koristiti varijablu NUMESTU (broj studenata u kućanstvu) te opet izračunati koeficijente koreliacije među varijablama.
+
+```{r cor2}
+# korelacijski koeficijenti parova regresora
+cor(cbind(hogar3_r19$NMIEMB,hogar3_r19$NUMOCUP, hogar3_r19$NUMESTU, hogar3_r19$NHABIT)) 
+
+```
+
+Zaključujemo da regresori nisu međusobno jako korelirani te da možemo nastaviti koristiti navedene varijable.
+
+#### 4.2 Normalnost reziduala i homogenost varijance
+
+Normalnost reziduala moguće je provjeriti grafički, pomoću kvantil-kvantil plota usporedbom s linijom normalne razdiobe.
+
+```{r reziduali}
+
+selected.model1 = fit.NMIEMB
+
+#histogram
+#hist(selected.model1$residuals, main = 'Histogram IMPEXAC~NMIEMB')
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.model1), main = 'Normalni Q-Q plot za IMPEXAC~NMIEMB')
+qqline(rstandard(selected.model1))
+
+#prikaz ovisnosti reziduala o procjenama modela
+plot(selected.model1$fitted.values,selected.model1$residuals, main = 'Reziduali IMPEXAC~NMIEMB', xlab='procjene modela', ylab='reziduali')
+
+
+selected.model2 = fit.NUMOCUP
+
+#histogram
+#hist(selected.model2$residuals, main = 'Histogram IMPEXAC~NUMOCUP')
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.model2), main = 'Normalni Q-Q plot za IMPEXAC~NUMOCUP')
+qqline(rstandard(selected.model2))
+
+#prikaz ovisnosti reziduala o procjenama modela
+plot(selected.model2$fitted.values,selected.model2$residuals, main = 'Reziduali IMPEXAC~NUMOCUP', xlab='procjene modela', ylab='reziduali')
+
+
+selected.model3 = fit.NUMESTU
+
+#histogram
+#hist(selected.model3$residuals, main = 'Histogram IMPEXAC~NUMESTU')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model3), main = 'Normalni Q-Q plot za IMPEXAC~NUMESTU')
+#qqline(rstandard(selected.model3))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model3$fitted.values,selected.model3$residuals, main = 'Reziduali IMPEXAC~NUMESTU', xlab='procjene modela', ylab='reziduali')
+
+
+selected.model4 = fit.NHABIT
+
+#histogram
+#hist(selected.model4$residuals, main = 'Histogram IMPEXAC~NHABIT')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model4), main = 'Normalni Q-Q plot za IMPEXAC~NHABIT')
+#qqline(rstandard(selected.model4))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model4$fitted.values,selected.model4$residuals, main = 'Reziduali IMPEXAC~NHABIT', xlab='procjene modela', ylab='reziduali')
+
+```
+
+Najbolje rezultate iz grafova možemo vidjeti za varijablu NMIEMB koja na Q-Q plotu ima jedan teži rep i čiji reziduali zadovoljavaju homogenost varijance. Iz plota ovisnosti reziduala za varijablu NHABIT se također može zaključiti homogenost varijance. Iz drugih Q-Q plotova se ne može zaključiti normalnost podataka te se iz plota ovisnosti reziduala o procjenama modela ne može vidjeti homogenost varijance. Iz tog razloga ćemo pokušati transformirati podatke te ponoviti gornji postupak, po redu za varijable NMIEMB, NUMOCUP, NUMESTU i NHABIT.
+
+
+Transformacija NMIEMB
+
+```{r transformacija NMIEMB}
+#log(x+1)
+#fit.NMIEMB.trans = lm(IMPEXAC~I(log(NMIEMB+1)),data=hogar3_r19)
+
+#selected.model = fit.NMIEMB.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~log(NMIEMB+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~log(NMIEMB+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~log(NMIEMB+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#e^x
+#fit.NMIEMB.trans = lm(IMPEXAC~I(exp(NMIEMB)),data=hogar3_r19)
+
+#selected.model = fit.NMIEMB.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~e^(NMIEMB)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~e^(NMIEMB)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~e^(NMIEMB)', xlab='procjene modela', ylab='reziduali')
+
+
+#1/(x+1)
+#fit.NMIEMB.trans = lm(IMPEXAC~I(1/(NMIEMB+1)),data=hogar3_r19)
+
+#selected.model = fit.NMIEMB.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~1/(NMIEMB+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~1/(NMIEMB+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~1/(NMIEMB+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#sqrt(x)
+#fit.NMIEMB.trans = lm(IMPEXAC~I(sqrt(NMIEMB)),data=hogar3_r19)
+
+#selected.model = fit.NMIEMB.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~sqrt(NMIEMB)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~sqrt(NMIEMB)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~sqrt(NMIEMB)', xlab='procjene modela', ylab='reziduali')
+```
+
+Varijablu NMIEMB smo transformirali transformacijama log(1+x), e^x, 1/(x+1) i sqrt(x). Transformacije nisu poboljšale izgled grafova, no kako Q-Q plot netransformiranih podataka odstupa od normalnog samo u jednom repu, u višestrukoj regresiji ćemo koristiti tu netransformiranu varijablu NMIEMB.
+
+
+Transformacija NUMOCUP
+
+```{r transformacija NUMOCUP}
+#log(x+1)
+#fit.NUMOCUP.trans = lm(IMPEXAC~I(log(NUMOCUP+1)),data=hogar3_r19)
+
+#selected.model = fit.NUMOCUP.trans
+
+#histogram
+
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~log(NUMOCUP+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~log(NUMOCUP+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~log(NUMOCUP+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#e^x
+#fit.NUMOCUP.trans = lm(IMPEXAC~I(exp(NUMOCUP)),data=hogar3_r19)
+
+#selected.model = fit.NUMOCUP.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~e^(NUMOCUP)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~e^(NUMOCUP)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~e^(NUMOCUP)', xlab='procjene modela', ylab='reziduali')
+
+
+#1/(x+1)
+#fit.NUMOCUP.trans = lm(IMPEXAC~I(1/(NUMOCUP+1)),data=hogar3_r19)
+
+#selected.model = fit.NUMOCUP.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~1/(NUMOCUP+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~1/(NUMOCUP+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~1/(NUMOCUP+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#sqrt(x)
+fit.NUMOCUP.trans = lm(IMPEXAC~I(sqrt(NUMOCUP)),data=hogar3_r19)
+
+selected.model = fit.NUMOCUP.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~sqrt(NUMOCUP)')
+
+#q-q plot reziduala s linijom normalne distribucije
+qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~sqrt(NUMOCUP)')
+qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~sqrt(NUMOCUP)', xlab='procjene modela', ylab='reziduali')
+```
+
+Nezavisnu varijablu NUMOCUP smo transformirali funkcijama log(1+x), e^x, 1/(x+1) i sqrt(x). U dvije funkcije smo dodali da se varijabli pribraja broj 1 jer se ne mogu odraditi operacije log(0) i 1/0. Nakon transformacije podataka, nijednom nismo dobili savršen rezultat, no poboljšao se prikaz te smo najbolje rezultate dobili kad smo transformirali podatke funkcijom sqrt(x). Iz tog razloga ćemo tako transformirane podatke koristiti dalje u višestrukoj regresiji.
+
+
+Transformacija NUMESTU
+
+```{r transformacija NUMESTU}
+#log(x+1)
+#fit.NUMESTU.trans = lm(IMPEXAC~I(log(NUMESTU+1)),data=hogar3_r19)
+
+#selected.model = fit.NUMESTU.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~log(NUMESTU+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~log(NUMESTU+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~log(NUMESTU+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#e^x
+#fit.NUMESTU.trans = lm(IMPEXAC~I(exp(NUMESTU)),data=hogar3_r19)
+
+#selected.model = fit.NUMESTU.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~e^(NUMESTU)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~e^(NUMESTU)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~e^(NUMESTU)', xlab='procjene modela', ylab='reziduali')
+
+
+#1/(x+1)
+#fit.NUMESTU.trans = lm(IMPEXAC~I(1/(NUMESTU+1)),data=hogar3_r19)
+
+#selected.model = fit.NUMESTU.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~1/(NUMESTU+1)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~1/(NUMESTU+1)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~1/(NUMESTU+1)', xlab='procjene modela', ylab='reziduali')
+
+
+#sqrt(x)
+#fit.NUMESTU.trans = lm(IMPEXAC~I(sqrt(NUMESTU)),data=hogar3_r19)
+
+#selected.model = fit.NUMESTU.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~sqrt(NUMESTU)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~sqrt(NUMESTU)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~sqrt(NUMESTU)', xlab='procjene modela', ylab='reziduali')
+```
+
+Nakon transformacije podataka i dalje nismo mogli dobiti više zadovoljavajuće rezultate te iz tog razloga izbacujemo varijablu NUMESTU iz analize.
+
+```{r izbacivanje varijable NUMESTU}
+hogar3_r19 = select(hogar3_r19, -c("NUMESTU"))
+```
+
+
+Transformacija NHABIT
+
+```{r transformacija NHABIT}
+#log(x)
+#fit.NHABIT.trans = lm(IMPEXAC~I(log(NHABIT)),data=hogar3_r19)
+
+#selected.model = fit.NHABIT.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~log(NHABIT)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~log(NHABIT)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~log(NHABIT)', xlab='procjene modela', ylab='reziduali')
+
+
+#e^x
+#fit.NHABIT.trans = lm(IMPEXAC~I(exp(NHABIT)),data=hogar3_r19)
+
+#selected.model = fit.NHABIT.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~e^(NHABIT)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~e^(NHABIT)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~e^(NHABIT)', xlab='procjene modela', ylab='reziduali')
+
+
+#1/x
+#fit.NHABIT.trans = lm(IMPEXAC~I(1/(NHABIT)),data=hogar3_r19)
+
+#selected.model = fit.NHABIT.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~1/(NHABIT)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~1/(NHABIT)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~1/(NHABIT)', xlab='procjene modela', ylab='reziduali')
+
+
+#sqrt(x)
+#fit.NHABIT.trans = lm(IMPEXAC~I(sqrt(NHABIT)),data=hogar3_r19)
+
+#selected.model = fit.NHABIT.trans
+
+#histogram
+#hist(rstandard(selected.model), main = 'Histogram IMPEXAC~sqrt(NHABIT)')
+
+#q-q plot reziduala s linijom normalne distribucije
+#qqnorm(rstandard(selected.model), main = 'Normalni Q-Q plot IMPEXAC~sqrt(NHABIT)')
+#qqline(rstandard(selected.model))
+
+#prikaz ovisnosti reziduala o procjenama modela
+#plot(selected.model$fitted.values,selected.model$residuals, main = 'Reziduali IMPEXAC~sqrt(NHABIT)', xlab='procjene modela', ylab='reziduali')
+```
+
+Nakon transformacije podataka i dalje nismo mogli dobiti više zadovoljavajuće rezultate te iz tog razloga izbacujemo varijablu NHABIT iz analize.
+
+```{r izbacivanje varijable NHABIT}
+hogar3_r19 = select(hogar3_r19, -c("NHABIT"))
+```
+
+
+### 5. Mjere kvalitete prilagodbe modela podacima
+
+Za određivanje mjere kvalitete prilagodbe modela koristi se koeficijent determinacije, definiran kao: $$R^2 = 1 - \frac{SSE}{SST},$$ gdje je: $$SSE = \sum_{i = 1}^{N}(y_i - \hat{y}_i)^2$$ tzv. "sum of the squares of the errors" i $SST = \sum_{i = 1}^{N}(y_i - \bar{y}_i)^2$ tzv. "total corrected sum of squares". Koeficijent determinacije $R^2$ je za linearne modele po definiciji $R^2 \in [0,1]$ i opisuje koji postotak varijance u izlaznoj varijabli $Y$ je procijenjeni linearni model objasnio/opisao.
+Prilagođeni koeficijent determinacije penalizira dodatne parametre u modelu: $$R_{adj}^2 = 1 - \frac{SSE/(n-k-1)}{SST/(n-1)}.$$
+
+### 6. Višestruka regresija
+
+
+```{r višestruka regresija}
+
+fit.multi <- lm(IMPEXAC ~ NMIEMB + sqrt(NUMOCUP), data = hogar3_r19)
+summary(fit.multi)
+
+```
+
+
+### 7. Zaključak
+
+Konačan model sadržava bitne varijable koje objašnjavaju do $25\%$ varijance točnog iznosa mjesečnih prihoda kućanstva. Za razne društvene i ekonomske studije je $30\%$ zadovoljavajući rezultat tako da možemo zaključiti da smo unatoč odbacivanju varijabli zbog kršenja pretpostavki dobili zadovoljavajući rezultat. U analizu su bile uključene metričke varijable korijena broja zaposlenih članova kućanstva i broja članova kućanstva te u postupku odbačene varijable broja financijski ovisne djece, broja studenata broja soba u kućanstvu.
+
+
+
+## 4. Postoji li razlika u rashodima kućanstva u 2019. i 2020. godini?
+
+Kako bismo odgovorili na ovo istraživačko pitanje koristit ćemo slučajnu varijablu GASTOT i njene vrijednosti zabilježene u 2019. i 2020. godini.
+
+Vizualizirajmo najprije distribuciju te varijable za 2019. godinu.
+
+```{r}
+gastot19 = hogar_r19$GASTOT
+hist(gastot19, main = "Ukupni godišnji izdaci za 2019. godinu", xlab="izdatak", ylab="broj kućanstava")
+```
+
+
+Iz priloženog histograma vidimo da je distribucija varijable GASTOT za 2019. izrazito iskrivljena u desno što ne sugerira normalnu raspodjelu ove slučajne varijable.
+
+```{r}
+gastot20 = hogar_r20$GASTOT
+hist(gastot20, main = "Ukupni godišnji izdaci za 2020. godinu", xlab="izdatak/€", ylab="broj kucanstava")
+
+
+```
+
+
+Slično kao i u 2019. godini distribucija slučajne varijable GASTOT je izrazito iskrivljena u desno te ni u ovom slučaju ne bismo mogli pretpostaviti normalnost ove slučajne varijable.
+
+Za uzorak slučajne varijable GASTOT koja prikazuje podatke iz 2019. godine koristit ćemo oznaku GASTOT19, a za uzorak slučajne varijable GASTOT koja prikazuje podatke iz 2020. godine koristit ćemo oznaku GASTOT20.
+
+Iz priloženog histograma možemo vidjeti da uzorci GASTOT19 i GASTOT20 imaju sličnu distribuciju.
+Boxplotovi daju naslutiti da slučajni uzorci imaju istu varijancu što ćemo provjeriti F-testom.
+
+Pretpostavke t-testa su normalnost i nezavisnost. Uzorci GASTOT19 i GASTOT20 su nezavisni jer istraživanje u te dvije godine nije provedeno na istim kućanstvima.
+Pretpostavku normalnosti pokušat ćemo zadovoljiti transformacijom podataka.
+
+Odgovor na istraživačko pitanje postoji li razlika u izdacima kućanstva u 2019. i 2020. godini dat ćemo na sljedeći način: najprije ćemo transformirati podatke kako bismo dobili normalnu distribuciju uzorka, zatim F-testom provjeriti jesu li varijance ova 2 uzorka jednake ili nisu te konačno provest ćemo t-test nad transformiranim podacima.
+
+Vrijednosti s indeksom jedan predstavljaju uzorak GASTOT19, a vrijednosti s indeksom dva predstavljaju uzorak GASTOT20.
+
+
+### 1. Prilagodba distibucije slučajnog uzorka
+
+
+Pokušajmo sada najprije transformirati podatke na normalnu razdiobu koristeći logaritamsku funkciju log(x).
+
+```{r}
+gastot19_trans = log(gastot19)
+gastot20_trans = log(gastot20)
+
+#hist(gastot19_trans)
+#hist(gastot20_trans)
+
+#summary(gastot19_trans)
+#summary(gastot20_trans)
+
+qqnorm(gastot19_trans)
+qqline(gastot19_trans, col="steelblue", lwd=2)
+
+qqnorm(gastot20_trans)
+qqline(gastot20_trans, col="steelblue", lwd=2)
+
+```
+
+Iz gornjih histograma možemo vidjeti da smo transformacijom dobili distribucije puno bliže normalnima. To nam ponajprije potvrđuju i Q-Q plotovi koje smo koristili kako bismo usporedili transformirane podatke s normalnom distribucijom. Jedini problem koji smo uveli u model ovom logaritamskom transformacijom je da logaritam od mjerne jedinice nema neko konkretno značenje.
+
+### 2. Provjera jednakosti varijanci
+
+Hipotezu o jednakosti varijanci slučajnog uzorka GASTOT19 i slučajnog uzorka GASTOT20 provjerit ćemo korištenjem F-testa.
+
+Postavimo najprije hipoteze:
+
+$$ \begin{aligned}
+H_0&: \sigma_1 = \sigma_2 \\
+H_1&: \sigma_1 \neq \sigma_2
+\end{aligned} $$
+
+Testna statistika koju računamo je:
+
+$$f =  \frac{s_1^2}{s_2^2}$$
+
+Ova statistika ima Fischerovu (F) distribuciju s $n_1 - 1$ i $n_2 - 1$ stupnjeva slobode pri čemu su $n_1$ i $n_2$ broj podataka u slučajnim uzorcima.
+Za provedbu testa koristimo ugrađenu R funkciju var.test().
+
+```{r}
+var.test(gastot19_trans, gastot20_trans, alternative = "two.sided")
+
+```
+
+Iz provedenog testa vidimo da je vrijednost F-statistike 1.051 i da je dobivena p-vrijednost približno 0.0005. Iz ova dva podatka već na razini značajnosti 1% razlika u varijancama ovih uzoraka je statistički značajna te se priklanjamo alternativnoj hipotezi $H_1$.
+
+### 3. Provedba t-testa
+
+Provedimo konačno t-test.
+
+Postavimo hipoteze
+$$ \begin{aligned}
+H_0&: \mu_1 = \mu_2 \\
+H_1&: \mu_1 \neq \mu_2
+\end{aligned} $$
+
+Koristimo testnu statistiku
+
+$$T =  \frac{\bar{X}_1 - \bar{X}_2 - (\mu_1 - \mu_2)}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}$$
+Distribucija ove testne statistike je aproksimativna t-distribucija pri čemu je broj stupnjeva slobode najveće cijelo od izraza:
+
+$$ \frac{(\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2})^2}{\frac{(\frac{s_1^2}{n_1})^2}{n_1 - 1} + \frac{(\frac{s_2^2}{n_2})^2}{n_2 - 1} } $$
+pri čemu su $s_1$ i $s_2$ nepristrani procjenitelji varijance slučajnih uzoraka GASTOT19 i GASTOT20.
+
+Za provedbu t-testa koristit ćemo R-ovu funkciju t.test().
+
+```{r}
+t.test(gastot19_trans, gastot20_trans, alt="two.sided", var.equal = FALSE)
+
+```
+
+Ovaj t-test nam daje p-vrijednost koja približno iznosi 2.6%. P-vrijednost je dovoljno mala da na nekim standardnim nivoima značajnosti (5%, 10%) odbacimo hipotezu $H_0$ u korist hipoteze $H_1$, odnosno priklanjamo se hipotezi da postoji statistička značajna razlika u podacima o rashodu kućanstva za 2019. i 2020. godinu.
